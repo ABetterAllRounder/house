@@ -415,10 +415,35 @@ $(document).ready(function() {
         // Function to convert image URL to blob
         function urlToBlob(url) {
             return new Promise((resolve, reject) => {
-                fetch(url)
-                    .then(response => response.blob())
-                    .then(blob => resolve(blob))
-                    .catch(error => reject(error));
+                // Check if running on file:// protocol
+                if (window.location.protocol === 'file:') {
+                    // Fallback: use XMLHttpRequest for file:// protocol
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    xhr.responseType = 'blob';
+                    xhr.onload = function() {
+                        if (xhr.status === 200 || xhr.status === 0) {
+                            resolve(xhr.response);
+                        } else {
+                            reject(new Error(`Failed to load ${url}: ${xhr.status}`));
+                        }
+                    };
+                    xhr.onerror = function() {
+                        reject(new Error(`Failed to load ${url}`));
+                    };
+                    xhr.send();
+                } else {
+                    // Use fetch for http/https
+                    fetch(url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.blob();
+                        })
+                        .then(blob => resolve(blob))
+                        .catch(error => reject(error));
+                }
             });
         }
         
